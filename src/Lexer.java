@@ -44,19 +44,13 @@ public class Lexer {
         }
 
         if (this.buffer.charAt(this.index) == '+') {
-            System.out.println("-----------------------");
-            System.out.println("Creating PLUS token...");
             Token tokenPLUS = new Token(PLUSTOKEN, "+", this.newlineCount);
-            System.out.println("-----------------------");
             this.index++;
             return tokenPLUS;
         }
 
         if (this.buffer.charAt(this.index) == '=') {
-            System.out.println("-----------------------");
-            System.out.println("Creating ASSMT token...");
             Token tokenASSMT= new Token(ASSMTTOKEN, "=", this.newlineCount);
-            System.out.println("-----------------------");
             this.index++;
             return tokenASSMT;
         }
@@ -80,8 +74,6 @@ public class Lexer {
     * Creates an ID token. Called from getNextToken.
     */
     private Token getIdentifier() {
-        System.out.println("-----------------------");
-        System.out.println("Creating ID token...");
         String IntId = "";
         int numLocator= 1;
         IntId+= this.buffer.charAt(this.index);
@@ -117,8 +109,6 @@ public class Lexer {
     * Creates an Integer token. Called from getNextToken.
     */
     private Token getInteger() {
-        System.out.println("-----------------------");
-        System.out.println("Creating INT token...");
         String IntOp = "";
         int numLocator= 1;
         IntOp+= this.buffer.charAt(this.index);
@@ -159,10 +149,7 @@ public class Lexer {
             tokenList.add(getNextToken());
         }
 
-        System.out.println("-----------------------");
-        System.out.println("Creating EndOfFile token...");
         tokenList.add(new Token(EOFTOKEN,"EndOfFile",0));
-        System.out.println("-----------------------");
 
         while (tokenList.contains(null)){
             tokenList.remove(null);
@@ -204,7 +191,6 @@ public class Lexer {
         Lexer lexer = new Lexer(fileName);
         System.out.println("Filename: " + fileName);
         System.out.println("Buffer: " + lexer.buffer);
-        System.out.println("-----------------------");
 
         ArrayList<Token> listTokens= lexer.getAllTokens();
 

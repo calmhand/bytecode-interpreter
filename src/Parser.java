@@ -4,7 +4,9 @@ import java.util.Scanner;
 public class Parser {
     public ArrayList<Token> tokenArray;
     public SymbolTable tokenMap= new SymbolTable();
+    public BytecodeInterpreter byteInterp = new BytecodeInterpreter();
     int index= 0;
+    int currentAddress= 0;
 
     /*
     * Constructor for Class Parser
@@ -12,7 +14,16 @@ public class Parser {
     */
     public Parser(String fileName){
         Lexer parseLexer = new Lexer(fileName);
+        System.out.println("Buffer: \n"+ parseLexer.buffer);
         this.tokenArray = parseLexer.getAllTokens();
+    }
+
+    private void nextToken() {
+        this.index++; //Increments Index.
+    }
+
+    private void putToken(){
+        this.index--; // Decrements Index.
     }
 
     /*
@@ -22,7 +33,8 @@ public class Parser {
     */
     public void parseProgram() { // calls parseAssignment in a loop.
         if (!this.tokenArray.get(0).getKeyType().equals("ID")) {
-            System.out.println("ERROR EXPECTING OPENING ID");
+            System.out.println("Error: Expecting Unused ID");
+            System.out.println("Error Line: " + tokenArray.get(0).getNewLine());
         }
         else{
             while (index < this.tokenArray.size()) {
@@ -52,7 +64,7 @@ public class Parser {
         */
         if (this.tokenArray.get(index).getKeyType().equals("INT") || this.tokenArray.get(index).getKeyType().equals("ID") &&
                 this.tokenMap.hashTable.containsKey(this.tokenArray.get(index).getTypeValue()) ||
-                this.tokenArray.get(index).getKeyType().equals("PLUS")){
+                this.tokenArray.get(index).getKeyType().equals("PLUS")) {
             parseExpression();
         }
 
@@ -80,14 +92,14 @@ public class Parser {
     private void parseId() { //parses ID tokens on left or right side. called by parseExpression if on right side.
 
         tokenMap.add(this.tokenArray.get(index).getTypeValue());
-        System.out.println("New ID Added To Map ***: " + this.tokenArray.get(index).getTypeValue());
         nextToken();
 
         if (!this.tokenArray.get(index).getKeyType().equals("ASSMT")) { //CHECKS IF TOKEN AFTER UNUSED ID IS AN ASSMT
-            System.out.println("Expecting Assignment Operator: Error Line " + this.tokenArray.get(index).getNewLine());
+            System.out.println("Error: Expecting AssignOp");
+            System.out.println("Error Line: " + tokenArray.get(index).getNewLine());
             index= this.tokenArray.size() - 1; // breaks loop
         }
-        else{
+        else {
             putToken(); //RETURNS TO INITIAL INDEX
         }
     }
@@ -98,14 +110,14 @@ public class Parser {
     * Causes parseExpression to be ran.
     */
     private void parseOperator() { //parses "=". Decides if expression is on left or right side.
-        System.out.println("Equals Assignment: " + this.tokenArray.get(index).getTypeValue());
         nextToken(); //CHECKING NEXT TOKEN IN ARRAY
 
         if (this.tokenArray.get(index).getKeyType().equals("INT") || this.tokenArray. get(index).getKeyType().equals("ID")) { //CHECKS IF NEXT TOKEN IS AN INT OR ID
             putToken(); //RETURNS TO INITIAL INDEX
         }
         else{
-            System.out.println("Expecting INT/ID: Assignment Operator Error");
+            System.out.println("Error: Expecting INT or ID (used or unused)");
+            System.out.println("Error Line: " + tokenArray.get(index).getNewLine());
             index= this.tokenArray.size() - 1;
         }
     }
@@ -115,59 +127,68 @@ public class Parser {
     * Called after parseOperator if program is valid.
     */
     private void parseExpression() {
-        /*
-        * Checks if a PLUS token was received.
-        * It also checks if the next token is *NOT* a INT or a Used ID token.
-        * An error will be shown if the next token is not a INT or Used ID token.
-        */
-        if (this.tokenArray.get(index).getKeyType().equals("PLUS")) { //CHECKS IF PLUS TOKEN WAS RECIEVED
-            System.out.println("Plus Operator: " + this.tokenArray.get(index).getTypeValue());
-            nextToken(); //CHECKS IF NEXT TOKEN IS AN INT OR USED ID
 
-            if (!this.tokenArray.get(index).getKeyType().equals("INT")) {
-                if (!this.tokenArray.get(index).getKeyType().equals("ID") &&
-                        this.tokenMap.hashTable.containsKey(this.tokenArray.get(index).getTypeValue())){
-                    System.out.println("ERROR EXPECTING INT OR UNUSED ID AFTER PLUS");
-                    index= this.tokenArray.size() - 1;
-                }
+        /*
+         * Checks to see if a used ID token was received.
+         * Used meaning if it's in the HashMap already, it was parsed once before.
+         */
+        if (this.tokenArray.get(index).getKeyType().equals("ID") &&
+                this.tokenMap.hashTable.containsKey(this.tokenArray.get(index).getTypeValue())) {
+
+            this.byteInterp.generate(byteInterp.getLOAD(), this.tokenMap.getAddressOld(this.tokenArray.get(index).getTypeValue()));
+
+            nextToken();
+
+            if (!this.tokenArray.get(index).getKeyType().equals("PLUS") && !this.tokenArray.get(index).getKeyType().equals("EOF")) {
+                System.out.println("Error: Expecting PlusOp after used ID");
+                System.out.println("Error Line: " + tokenArray.get(index).getNewLine());
+                index= this.tokenArray.size() - 1;
+            }
+            else if (this.tokenArray.get(index).getKeyType().equals("ID") &&
+                    !this.tokenMap.hashTable.containsKey(this.tokenArray.get(index).getTypeValue()) || this.tokenArray.get(index).getKeyType().equals("EOF")) {
+
+                this.byteInterp.generate(byteInterp.getSTORE(), currentAddress);
+                currentAddress++;
+                putToken();
             }
             else{
                 putToken();
             }
+        }
+
+        /*
+         * Checks to see if an ID token is not present in the HashMap that was received.
+         * Not present meaning this ID has not been parsed before.
+         */
+        if (this.tokenArray.get(index).getKeyType().equals("ID") &&
+                !this.tokenMap.hashTable.containsKey(this.tokenArray.get(index).getTypeValue())) {
+            parseId(); //CHECKS IF NEXT TOKEN IS AN ASSMT. INDEX REDUCTION NOT NEEDED AFTER CALL.
         }
 
         /*
         * Checks if an INT token was received.
         * It also checks if the next token is supposed to be a PLUS token.
-        * If the next token is neither a ID, PLUS, or EOF, an error will be shown.
+        * If the next token is neither a unused ID, PLUS, or EOF, an error will be shown.
         */
-        if (this.tokenArray.get(index).getKeyType().equals("INT")) { //CHECKS IF INT TOKEN WAS RECIEVED
-            System.out.println("Integer: " + this.tokenArray.get(index).getTypeValue());
+        if (this.tokenArray.get(index).getKeyType().equals("INT")) { //CHECKS IF INT TOKEN WAS RECEIVED
+
+            this.byteInterp.generate(byteInterp.getLOADI(), Integer.parseInt(this.tokenArray.get(index).getTypeValue()));
+
             nextToken(); //CHECKS IF NEXT TOKEN IS PLUS
 
             if (!this.tokenArray.get(index).getKeyType().equals("PLUS") &&
                     !this.tokenArray.get(index).getKeyType().equals("ID") && !this.tokenArray.get(index).getKeyType().equals("EOF")) {
-                System.out.println("ERROR EXPECTING PLUS OR ID AFTER INT");
+                System.out.println("Error: Expecting PlusOp or ID (used or unused) after INT");
+                System.out.println("Error Line: " + tokenArray.get(index).getNewLine());
                 index= this.tokenArray.size() - 1;
             }
-            else{
+            //Checks if an unused ID token is found after an int token. if it is, then generate is called to store the
+            //previous ID into the bytecode.
+            else if (this.tokenArray.get(index).getKeyType().equals("ID") &&
+                    !this.tokenMap.hashTable.containsKey(this.tokenArray.get(index).getTypeValue()) || this.tokenArray.get(index).getKeyType().equals("EOF")) {
+                this.byteInterp.generate(byteInterp.getSTORE(), currentAddress);
+                currentAddress++;
                 putToken();
-            }
-
-        }
-
-        /*
-        * Checks to see if a used ID token was received.
-        * Used meaning if it's in the HashMap already, it was parsed once before.
-        */
-        if (this.tokenArray.get(index).getKeyType().equals("ID") &&
-                this.tokenMap.hashTable.containsKey(this.tokenArray.get(index).getTypeValue())) {
-            System.out.println("Used ID: " + this.tokenArray.get(index).getTypeValue());
-            nextToken();
-
-            if (!this.tokenArray.get(index).getKeyType().equals("PLUS") && !this.tokenArray.get(index).getKeyType().equals("EOF")) {
-                System.out.println("ERROR EXPECTING PLUS AFTER USED ID");
-                index= this.tokenArray.size() - 1;
             }
             else{
                 putToken();
@@ -175,14 +196,21 @@ public class Parser {
         }
 
         /*
-        * Checks to see if an ID token is not present in the HashMap was received.
-        * Not present meaning this ID has not been parsed before.
-        */
-        if (this.tokenArray.get(index).getKeyType().equals("ID") &&
-                !this.tokenMap.hashTable.containsKey(this.tokenArray.get(index).getTypeValue())) {
+         * Checks if a PLUS token was received.
+         * It also checks if the next token is *NOT* a INT or a Used ID token.
+         * An error will be shown if the next token is not a INT or Used ID token.
+         */
+        if (this.tokenArray.get(index).getKeyType().equals("PLUS")) { //CHECKS IF PLUS TOKEN WAS RECEIVED
+            nextToken(); //CHECKS IF NEXT TOKEN IS AN INT OR USED ID
 
-            System.out.println("Unused ID: " + this.tokenArray.get(index).getTypeValue());
-            parseId(); //CHECKS IF NEXT TOKEN IS AN ASSMT. INDEX REDUCTION NOT NEEDED AFTER CALL.
+            if (!this.tokenArray.get(index).getKeyType().equals("INT")) {
+                if (!this.tokenArray.get(index).getKeyType().equals("ID") && this.tokenMap.hashTable.containsKey(this.tokenArray.get(index).getTypeValue())){
+                    System.out.println("Error: Expecting INT or unused ID after PlusOp");
+                    System.out.println("Error Line: " + tokenArray.get(index).getNewLine());
+                    index= this.tokenArray.size() - 1;
+                }
+            }
+            putToken();
         }
     }
 
@@ -191,14 +219,6 @@ public class Parser {
     */
     public String toString() {
         return "Parser{" + "tokenArray=" + tokenArray + ", tokenMap=" + tokenMap + ", index=" + index + '}';
-    }
-
-    private void nextToken() {
-        this.index++; //Increments Index.
-    }
-
-    private void putToken(){
-        this.index--; // Decrements Index.
     }
 
     public static void main(String[] args) {
@@ -211,6 +231,11 @@ public class Parser {
 
         Parser parser = new Parser(fileName);
         parser.parseProgram();
+
+        System.out.println(parser.tokenMap);
+        System.out.println("Bytecode: " + parser.byteInterp.bytecode);
+
+        parser.byteInterp.run(parser.byteInterp.bytecode);
     }
 }
 

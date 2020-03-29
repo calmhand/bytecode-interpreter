@@ -2,21 +2,23 @@ import java.util.HashMap;
 
 public class SymbolTable {
     public HashMap<String, Integer> hashTable= new HashMap<>();
-    int index= 0;
+    int newIndex= 0;
+    int oldIndex= 0;
 
     public void add(String TokenID) {
 
-        this.hashTable.put(TokenID, index);
-        index++;
+        this.hashTable.put(TokenID, newIndex);
+        newIndex++;
     }
 
-    public Integer getAddress(String TokenID) {
-
-        return this.hashTable.getOrDefault(TokenID, -1);
+    public int getAddressOld(String TokenID) {
+        int oldAddy= this.hashTable.getOrDefault(TokenID, -1);
+        oldIndex++;
+        return oldAddy;
     }
 
     public String toString() {
-        return "SymbolTable{" + "hashTable=" + hashTable + ", index=" + index + '}';
+        return "SymbolTable: "+ hashTable;
     }
 }
 

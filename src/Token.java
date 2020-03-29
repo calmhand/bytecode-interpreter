@@ -4,14 +4,13 @@
 public class Token {
     private String keyType;
     private String typeValue;
-    private Integer newLine;
+    private Integer newLine= 1;
 
 
     public Token(String lexType, String lexValue, Integer lexLine){
         this.keyType= lexType;
         this.typeValue= lexValue;
         this.newLine= lexLine;
-        createString();
     }
 
     public String getKeyType() {
@@ -26,12 +25,13 @@ public class Token {
         return newLine;
     }
 
-    /*
-    * When a token is created, this prints its Type, Value, and Location.
-    */
-    private void createString(){
-        System.out.println("Token Type: " + this.keyType);
-        System.out.println("Token Value: " + this.typeValue);
-        System.out.println("Line: " + this.newLine);
+
+    @Override
+    public String toString() {
+        return "Token{" +
+                "keyType='" + keyType + '\'' +
+                ", typeValue='" + typeValue + '\'' +
+                ", newLine=" + newLine +
+                '}';
     }
 }
