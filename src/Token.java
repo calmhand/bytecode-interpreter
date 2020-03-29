@@ -4,7 +4,7 @@
 public class Token {
     private String keyType;
     private String typeValue;
-    private Integer newLine= 1;
+    private Integer newLine;
 
 
     public Token(String lexType, String lexValue, Integer lexLine){
